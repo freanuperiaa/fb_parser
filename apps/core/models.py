@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class FacebookPage(models.Model):
+class FacebookGroup(models.Model):
     name = models.CharField(max_length=150)
     url = models.URLField(unique=True)
 
@@ -13,7 +13,7 @@ class Post(models.Model):
     title = models.CharField(max_length=100)
     url = models.URLField(unique=True, default='')
     group = models.ForeignKey(
-        FacebookPage, on_delete=models.SET_NULL, null=True,
+        FacebookGroup, on_delete=models.SET_NULL, null=True,
         related_name='posts'
     )
     author = models.CharField(max_length=75)

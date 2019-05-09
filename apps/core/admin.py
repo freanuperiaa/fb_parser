@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import FacebookPage, Post, Comment
+from .models import FacebookGroup, Post, Comment
 
-admin.site.register(FacebookPage)
+admin.site.register(FacebookGroup)
 admin.site.register(Post)
 admin.site.register(Comment)

@@ -1,7 +1,7 @@
 import scrapy
 from scrapy import FormRequest
 
-from .models import FacebookPage, Post, Comment
+from .models import FacebookGroup, Post, Comment
 
 
 class GroupPostsSpider(scrapy.Spider):
@@ -57,7 +57,6 @@ class GroupPostsSpider(scrapy.Spider):
         groups = response.selector.xpath(
             '/html/body/div/div/div[2]/div/table/tbody/tr/td'
             '/div[2]/ul/li/table/tbody/tr/td[1]'
-
         )
         self.logger.info('gathered groups:')
         for group in groups:
@@ -65,7 +64,7 @@ class GroupPostsSpider(scrapy.Spider):
             url = url[0]
             name = group.xpath('a/text()').extract()
             name = name[0]
-            new_page = FacebookPage(
+            new_page = FacebookGroup(
                 name=name,
                 url=url,
             )
@@ -107,7 +106,7 @@ class GroupPostsSpider(scrapy.Spider):
             'group': response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[2]/a/text()'
-            ).extract(),
+            ).extract()[0],
             'group url': self.clean_url(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[2]/a/@href'
@@ -185,7 +184,7 @@ class GroupPostsSpider(scrapy.Spider):
             angry =''
         else:
             angry = angry[0]
-        this_group = FacebookPage.objects.get(name=response.meta.get('group'))
+        this_group = FacebookGroup.objects.get(name=response.meta.get('group'))
         title = response.meta.get('title')
         title = title[0]
         author = response.meta.get('author')
@@ -256,7 +255,8 @@ class GroupPostsSpider(scrapy.Spider):
                 'previous comments")]/@href').extract()[0]
         except IndexError:
             prev_comments = None
-        yield scrapy.Request(url=(self.facebook+prev_comments),
-                             callback=self.parse_comments)
         if prev_comments is not None:
+            yield scrapy.Request(url=(self.facebook+prev_comments),
+                                 callback=self.parse_comments)
+        else:
             pass
