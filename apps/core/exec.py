@@ -1,7 +1,7 @@
 import scrapy
 from scrapy.crawler import CrawlerProcess, Crawler
 
-from scraper import GroupPostsSpider
+from .scraper import GroupPostsSpider
 
 
 def scrape(inp_email, inp_pass):
