@@ -260,3 +260,37 @@ class GroupPostsSpider(scrapy.Spider):
                                  callback=self.parse_comments)
         else:
             pass
+
+
+class IndividualGroupPostSpider(GroupPostsSpider):
+
+    def __init__(self, *args, **kwargs):
+        self.group_url = kwargs.pop('group_url')
+        super(IndividualGroupPostSpider, self).__init__(*args, **kwargs)
+
+    def parse_home(self, response):
+        # goes through the 'save device' part by not saving device
+        if response.xpath("//div/a[contains(@href,'save-device')]"):
+            self.logger.info('"save-device" checkpoint. redirecting...')
+            return FormRequest.from_response(
+                response,
+                formdata={'name_action_selected': 'dont_save'},
+                callback=self.parse_home
+            )
+        # if "don't save" is selected, go on to the group page
+        msg = 'saved device. going to -- ' + self.group_url
+        self.logger.info(msg)
+        return scrapy.Request(
+            url=self.group_url,
+            callback=self.parse_group_info,
+        )
+
+    def parse_group_info(self,response):
+        group_name = response.xpath(
+            '//table/tbody/tr/td[2]/h1/div/text()').extract()[0]
+        this_group_url = response.request.url
+        this_group = FacebookGroup(name=group_name, url=this_group_url)
+        this_group.save()
+        yield scrapy.Request(
+            url=this_group_url, callback=self.parse_group, dont_filter=True,
+        )
