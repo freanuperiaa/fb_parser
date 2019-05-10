@@ -64,13 +64,14 @@ class GroupPostsSpider(scrapy.Spider):
             url = url[0]
             name = group.xpath('a/text()').extract()
             name = name[0]
-            new_page = FacebookGroup(
-                name=name,
-                url=url,
-            )
-            new_page.save()
+            if not FacebookGroup.objects.filter(name=name).exists():
+                new_page = FacebookGroup(
+                    name=name,
+                    url=url,
+                )
+                new_page.save()
             self.logger.info('saved new facebook page instance')
-            yield scrapy.Request(url=new_page.url, callback=self.parse_group)
+            yield scrapy.Request(url=url, callback=self.parse_group)
 
     def parse_group(self, response):
         # for every postings in the group page, parse
@@ -289,8 +290,9 @@ class IndividualGroupPostSpider(GroupPostsSpider):
         group_name = response.xpath(
             '//table/tbody/tr/td[2]/h1/div/text()').extract()[0]
         this_group_url = response.request.url
-        this_group = FacebookGroup(name=group_name, url=this_group_url)
-        this_group.save()
+        if not FacebookGroup.objects.filter(name=group_name).exists():
+            this_group = FacebookGroup(name=group_name, url=this_group_url)
+            this_group.save()
         yield scrapy.Request(
             url=this_group_url, callback=self.parse_group, dont_filter=True,
         )
