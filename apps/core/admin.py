@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.db.models import Count
 
@@ -9,8 +10,8 @@ admin.site.register(Comment)
 
 @admin.register(FacebookGroup)
 class FacebookGroupAdmin(admin.ModelAdmin):
+    change_list_template = 'core/groups_changelist.html'
     list_display = ['name', 'url']
-    
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
