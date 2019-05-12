@@ -21,7 +21,6 @@ def start(request):
         user = data.get('username')
         password = data.get('password')
         url = data.get('url')
-        print(url, password, url)
         if url is '':
             print('start scraping everything')
             scrape.delay(user, password)

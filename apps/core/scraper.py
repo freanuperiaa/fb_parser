@@ -77,8 +77,9 @@ class GroupPostsSpider(scrapy.Spider):
         # for every postings in the group page, parse
         # posting's 'FULL STORY' link
         indiv_postings_urls = response.selector.xpath(
-            '/html/body/div/div/div[2]/div/div[1]/div[5]/div[1]/div/div[2]'
-            '/div[2]/a[3][contains(@href, "/groups/")]/@href').extract()
+            '//span[@aria-hidden="true"]/following-sibling'
+            '::a[contains(text(), "Full")]/@href'
+        ).extract()
         for x in indiv_postings_urls:
             url = self.clean_url(x)
             self.logger.info(url)

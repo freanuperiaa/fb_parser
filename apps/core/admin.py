@@ -11,7 +11,10 @@ admin.site.register(Comment)
 @admin.register(FacebookGroup)
 class FacebookGroupAdmin(admin.ModelAdmin):
     change_list_template = 'core/groups_changelist.html'
-    list_display = ['name', 'url']
+    list_display = ['name', 'url', 'no_of_posts']
+
+    def no_of_posts(self, obj):
+        return obj.posts.all().count()
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
