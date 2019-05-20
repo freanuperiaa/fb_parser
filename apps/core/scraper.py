@@ -1,10 +1,15 @@
 import scrapy
 from scrapy import FormRequest
+from scrapy.utils import log
 
 from .models import FacebookGroup, Post, Comment
 
 
 class GroupPostsSpider(scrapy.Spider):
+
+    custom_settings = {
+        'LOG_LEVEL': 'ERROR',
+    }
 
     def __init__(self, *args, **kwargs):
         # We are going to pass these args from our django view.
@@ -13,16 +18,31 @@ class GroupPostsSpider(scrapy.Spider):
         self.name = 'group_posts_spider'
         self.facebook = 'https://mbasic.facebook.com'
         self.start_urls = [self.facebook]
+        super().__init__(*args, **kwargs)
 
     def clean_url(self, url):
         url = url[:(url.find('?refid'))]
         url = url[:(url.find('&fref'))]
         url = url[:(url.find('%3Amf'))]
         url = url[:(url.find('?fref'))]
-        if self.facebook in url:
-            return url
+        if url != '':
+            if self.facebook in url:
+                return url
+            else:
+                return self.facebook + url
         else:
-            return self.facebook + url
+            return ''
+
+    def get_element(self, element):
+        '''
+
+        :param element: the object returned by getting an element by XPath
+        :return: if list is empty, returns '', else, returns first element
+        '''
+        if element == []:
+            return ''
+        else:
+            return element[0]
 
     def parse(self, response):
         # prompt for username and password, then login
@@ -105,25 +125,24 @@ class GroupPostsSpider(scrapy.Spider):
                 '/div[1]/div[1]/span[2]/text()'
             ).extract(),
             'post url': self.clean_url(response.request.url),
-            'group': response.xpath(
+            'group': self.get_element(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[2]/a/text()'
-            ).extract()[0],
-            'group url': self.clean_url(response.xpath(
+            ).extract()),
+            'group url': self.clean_url(self.get_element(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[2]/a/@href'
-            ).extract()[0]),
+            ).extract())),
             'author': response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[1]/a/text()'
             ).extract(),
-            'author url': self.clean_url(response.xpath(
+            'author url': self.clean_url(self.get_element(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[1]/a/@href'
-            ).extract()[0]),
+            ).extract())),
             'description': ''.join(response.xpath(
-                '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[3]'
-                '/div[1]/div[4]/p/text()'
+                '//div[string-length(@class) = 2]//p/text()'
             ).extract()),
         }
         reactions = self.facebook + response.xpath(
@@ -133,66 +152,38 @@ class GroupPostsSpider(scrapy.Spider):
 
     def parse_reactions(self, response):
         self.logger.info('parse post info, including reacts')
-        all_reacts = response.xpath('//a[contains(text(), "All")]/text()').extract()
-        if all_reacts == []:
-            all_reacts = ''
-        else:
-            all_reacts = all_reacts[0]
-        likes = response.xpath(
+        all_reacts = self.get_element(response.xpath(
+            '//a[contains(text(), "All")]/text()').extract())
+        likes = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Like"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if likes == []:
-            likes =''
-        else:
-            likes = likes[0]
-        heart = response.xpath(
+        ).extract())
+        heart = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Love"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if heart == []:
-            heart =''
-        else:
-            heart = heart[0]
-        wow = response.xpath(
+        ).extract())
+        wow = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Wow"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if wow == []:
-            wow =''
-        else:
-            wow = wow[0]
-        haha = response.xpath(
+        ).extract())
+        haha = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Haha"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if haha == []:
-            haha =''
-        else:
-            haha = haha[0]
-        sad = response.xpath(
+        ).extract())
+        sad = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Sad"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if sad == []:
-            sad = ''
-        else:
-            sad = sad[0]
-        angry = response.xpath(
+        ).extract())
+        angry = self.get_element(response.xpath(
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Angry"]/'
             'following-sibling::span/text()'
-        ).extract()
-        if angry == []:
-            angry =''
-        else:
-            angry = angry[0]
+        ).extract())
         this_group = FacebookGroup.objects.get(name=response.meta.get('group'))
-        title = response.meta.get('title')
-        title = title[0]
+        title = self.get_element(response.meta.get('title'))
         author = response.meta.get('author')
         author = author[0]
         new_post = Post(
-            title=title, url=response.meta.get('post url'),
+            title=title, url=self.clean_url(response.meta.get('post url')),
             group=this_group, author=author,
             author_url=response.meta.get('author url'), description=
             response.meta.get('description'), total_reacts=all_reacts,
@@ -207,42 +198,37 @@ class GroupPostsSpider(scrapy.Spider):
     def parse_comments(self, response):
         # get the comments in the page
         self.logger.info('parse comments of post')
-        title = response.xpath(
+        title = self.get_element(
+            response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[3]'
                 '/div[1]/div[1]/span[2]/text()'
-        ).extract()
-        title = title[0]
+            ).extract()
+        )
+
         author = response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[1]/a/text()'
             ).extract()
         author = author[0]
-        this_post = Post.objects.get(title=title, author=author)
+        this_post = Post.objects.get(
+            title=title, author=author, url=self.clean_url(response.request.url))
         comments = response.xpath(
             '//div[string-length(@class) = 2 and count(@id)=1 and contains'
             '("0123456789", substring(@id,1,1))]')
         # iterate through the comments div collected
-        print(self.clean_url(response.request.url))
         for comment in comments:
             # author
-            author = comment.xpath('./div/h3/a/text()').extract()
-            print(author)
-            # text
-            text = comment.xpath('./div/div[1]/text()').extract()
-            print(text)
-            # time
-            time = comment.xpath('./div/div[3]/abbr/text()').extract()
-            print(time)
-            # reacts
-            reacts = comment.xpath('./div/div/span/span/a[1]/span/'
-                                'following-sibling::text()').extract()
-            if reacts == []:
-                reacts = ''
-            else:
-                reacts = reacts[0]
-            print(reacts)
+            author = self.get_element(
+                comment.xpath('./div/div[1]/text()').extract())
+            text = self.get_element(comment.xpath(
+                './div/div[1]/text()').extract())
+            time = self.get_element(comment.xpath(
+                './div/div[3]/abbr/text()').extract())
+            reacts = self.get_element(comment.xpath(
+                './div/div/span/span/a[1]/span/following-sibling::text()'
+            ).extract())
             new_comment = Comment(
-                author=author[0], text=text[0], time=time[0], no_reacts=reacts,
+                author=author, text=text, time=time, no_reacts=reacts,
                 post=this_post,
             )
             new_comment.save()
@@ -287,7 +273,7 @@ class IndividualGroupPostSpider(GroupPostsSpider):
             callback=self.parse_group_info,
         )
 
-    def parse_group_info(self,response):
+    def parse_group_info(self, response):
         group_name = response.xpath(
             '//table/tbody/tr/td[2]/h1/div/text()').extract()[0]
         this_group_url = response.request.url

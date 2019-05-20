@@ -19,7 +19,7 @@
 
             <form method="POST" action="{% url 'start' %}">
                 {% csrf_token %}
-                {{ parse_form }}
+                {{ form }}
                 <button type="submit">initiate parse</button>
             </form>
 

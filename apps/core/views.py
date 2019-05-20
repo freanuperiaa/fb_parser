@@ -1,31 +1,22 @@
-from django.views.generic import TemplateView
-from django.views.generic.base import View
-from django.shortcuts import redirect
+from django.urls import reverse
+from django.views import generic
 
 from .forms import ParseForm
 from .tasks import scrape, scrape_group
 
 
-class HomePageView(TemplateView):
-    template_name ='core/home.html'
+class ParseView(generic.FormView):
+    form_class = ParseForm
+    template_name = 'core/home.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['parse_form'] = ParseForm()
-        return context
-
-
-def start(request):
-    if request.method == 'POST':
-        data = request.POST.copy()
-        user = data.get('username')
-        password = data.get('password')
-        url = data.get('url')
-        if url is '':
+    def form_valid(self, form):
+        if form.cleaned_data['url'] == '':
             print('start scraping everything')
-            scrape.delay(user, password)
-            return redirect('/admin/core/post')
+            scrape.delay(**form.cleaned_data)
         else:
-            print('scraping group{}'.format(url))
-            scrape_group.delay(user, password, url)
-            return redirect('/admin/core/post')
+            print('scraping group{}'.format(form.cleaned_data['url']))
+            scrape_group.delay(**form.cleaned_data)
+        return super(ParseView, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('admin:core_post_changelist')

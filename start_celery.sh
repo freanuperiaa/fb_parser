@@ -1,3 +1,2 @@
 #!/bin/sh
-celery -A config worker -l info
-
+celery -A config worker --loglevel=ERROR
