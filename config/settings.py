@@ -23,9 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '2w^vy$sm&!+)plw(r*8ow-k-jl6gbnib3uq1n&_(bl^^2z_+*c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ['*']
+DEBUG = True
 
 
 # Application definition
@@ -124,3 +122,4 @@ STATIC_URL = '/static/'
 # Celery
 CELERY_BROKER_URL = 'amqp://localhost'
 CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = 'ERROR'
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False

@@ -126,8 +126,8 @@ class GroupPostsSpider(scrapy.Spider):
             ).extract(),
             'post url': self.clean_url(response.request.url),
             'group': self.get_element(response.xpath(
-                '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
-                '/table/tbody/tr/td[2]/div/h3/span/strong[2]/a/text()'
+                '//strong/following-sibling::a[contains(@href, "/groups/")]/'
+                'text() | //strong/a[contains(@href, "/groups/")]/text()'
             ).extract()),
             'group url': self.clean_url(self.get_element(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
@@ -178,10 +178,12 @@ class GroupPostsSpider(scrapy.Spider):
             '//a[contains(@href, "ufi/reaction")]/img[@alt="Angry"]/'
             'following-sibling::span/text()'
         ).extract())
-        this_group = FacebookGroup.objects.get(name=response.meta.get('group'))
+        # reason behind 'name__icontains' is because there are some
+        # groups that have the names splitted on the full story page.
+        this_group = FacebookGroup.objects.get(
+            name__icontains=response.meta.get('group'))
         title = self.get_element(response.meta.get('title'))
-        author = response.meta.get('author')
-        author = author[0]
+        author = self.get_element(response.meta.get('author'))
         new_post = Post(
             title=title, url=self.clean_url(response.meta.get('post url')),
             group=this_group, author=author,
@@ -205,11 +207,10 @@ class GroupPostsSpider(scrapy.Spider):
             ).extract()
         )
 
-        author = response.xpath(
+        author = self.get_element(response.xpath(
                 '/html/body/div/div/div[2]/div/div[1]/div[1]/div/div[1]/div[1]'
                 '/table/tbody/tr/td[2]/div/h3/span/strong[1]/a/text()'
-            ).extract()
-        author = author[0]
+            ).extract())
         this_post = Post.objects.get(
             title=title, author=author, url=self.clean_url(response.request.url))
         comments = response.xpath(
